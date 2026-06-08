@@ -1,0 +1,30 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap');
+@import "tailwindcss";
+@theme {
+  --color-primary: #502416;
+  --color-primary-container: #6b3a2a;
+  --color-primary-fixed: #ffdbd0;
+  --color-on-primary: #ffffff;
+  --color-secondary: #7c5800;
+  --color-secondary-container: #feca66;
+  --color-surface: #fff8f1;
+  --color-surface-container: #f4ede5;
+  --color-surface-container-low: #f9f3eb;
+  --color-surface-container-high: #eee7df;
+  --color-surface-container-lowest: #ffffff;
+  --color-on-surface: #1e1b17;
+  --color-on-surface-variant: #52443f;
+  --color-outline: #85736e;
+  --color-outline-variant: #d7c2bc;
+  --color-on-primary-fixed-variant: #6a3a2a;
+
+  --font-sans: "Nunito Sans", sans-serif;
+}
+
+body {
+  background-color: #fff8f1;
+  background-image: radial-gradient(#d7c2bc 0.5px, transparent 0.5px);
+  background-size: 24px 24px;
+  font-family: "Nunito Sans", sans-serif;
+}
