@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
+import BottomNav from "../components/BottomNav";
 import {
   findClientByPhone,
   getClientTransactions,
@@ -64,11 +65,7 @@ export default function ClientProfile() {
     setLoading(true);
     setError(null);
     try {
-      const [clientData, txData] = await Promise.all([
-        findClientByPhone(phoneNumber),
-        // No tenemos getClientTransactions por phone, primero buscamos cliente
-        Promise.resolve([] as Transaction[]),
-      ]);
+      const clientData = await findClientByPhone(phoneNumber);
 
       if (!clientData) {
         setError("Cliente no encontrado.");
@@ -99,6 +96,7 @@ export default function ClientProfile() {
           <div className="w-full h-32 bg-surface-container rounded-xl animate-pulse mt-4" />
           <div className="w-full h-48 bg-surface-container rounded-xl animate-pulse" />
         </main>
+          <BottomNav />
       </div>
     );
   }

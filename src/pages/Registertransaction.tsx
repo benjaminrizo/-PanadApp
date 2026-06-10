@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
+import BottomNav from "../components/BottomNav";
 import { getClientById, registerTransaction, type Client } from "../services/api";
 
 // Regla: $1.000 COP = 1 punto
@@ -317,6 +318,7 @@ export default function RegisterTransaction() {
           <p className="text-xs font-bold text-primary tracking-widest uppercase">Artesanal y Fresco</p>
         </div>
       </main>
+      <BottomNav />
     </div>
   );
 }

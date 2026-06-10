@@ -18,6 +18,8 @@ export default function Navbar({
   onLogout,
 }: NavbarProps) {
   const navigate = useNavigate();
+  const empRaw = typeof window !== "undefined" ? localStorage.getItem("employee") : null;
+  const emp = empRaw ? JSON.parse(empRaw) : null;
 
   return (
     <header className="sticky top-0 z-50 bg-surface shadow-[0px_4px_12px_rgba(107,58,42,0.1)]">
@@ -55,15 +57,20 @@ export default function Navbar({
 
         {/* Derecha: logout en modo dashboard, vacío en modo detalle */}
         {!back ? (
-          <button
-            onClick={onLogout}
-            aria-label="Cerrar sesión"
-            className="hover:bg-surface-container-high p-2 rounded-full active:scale-95 transition-all"
-          >
-            <span className="material-symbols-outlined text-primary">
-              logout
-            </span>
-          </button>
+          <div className="flex items-center gap-3">
+            {emp && (
+              <div className="text-sm font-semibold text-on-surface-variant">
+                {emp.name}
+              </div>
+            )}
+            <button
+              onClick={onLogout}
+              aria-label="Cerrar sesión"
+              className="hover:bg-surface-container-high p-2 rounded-full active:scale-95 transition-all"
+            >
+              <span className="material-symbols-outlined text-primary">logout</span>
+            </button>
+          </div>
         ) : (
           // Spacer para centrar el título
           <div className="w-10" />
