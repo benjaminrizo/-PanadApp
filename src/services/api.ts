@@ -180,6 +180,16 @@ export async function redeemReward(
   if (error) throw error;
 }
 
+/** Actualizar stock de un premio (admin) */
+export async function updateRewardStock(rewardId: string, newStock: number): Promise<void> {
+  const { error } = await supabase
+    .from("rewards")
+    .update({ stock: newStock })
+    .eq("id", rewardId);
+
+  if (error) throw error;
+}
+
 // ─── EMPLEADOS ────────────────────────────────────────────────────────────────
 
 /** Validar PIN de empleado */
@@ -195,4 +205,16 @@ export async function validateEmployeePin(
 
   if (error) throw error;
   return data;
+}
+
+/** Listado de clientes (para vista de clientes) */
+export async function getClients(limit = 100): Promise<Client[]> {
+  const { data, error } = await supabase
+    .from("clients")
+    .select("id, name, phone, points, tier, created_at")
+    .order("name", { ascending: true })
+    .limit(limit);
+
+  if (error) throw error;
+  return data ?? [];
 }

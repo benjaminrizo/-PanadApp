@@ -87,6 +87,7 @@ export default function Dashboard() {
   }
 
   function handleLogout() {
+    localStorage.removeItem("employee");
     navigate("/login");
   }
 
@@ -230,27 +231,27 @@ export default function Dashboard() {
 
         {/* Quick access */}
         <div className="grid grid-cols-2 gap-4">
-          <div className="bg-surface-container-low p-6 rounded-xl flex flex-col gap-2 hover:scale-[1.02] transition-transform cursor-pointer shadow-[0px_4px_12px_rgba(107,58,42,0.1)]">
+          <button onClick={() => navigate("/register-transaction")} className="bg-surface-container-low p-6 rounded-xl flex flex-col gap-2 hover:scale-[1.02] transition-transform cursor-pointer shadow-[0px_4px_12px_rgba(107,58,42,0.1)] text-left">
             <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>
               point_of_sale
             </span>
-            <span className="font-bold text-base text-primary">Cierre de Caja</span>
-          </div>
-          <div className="bg-surface-container-low p-6 rounded-xl flex flex-col gap-2 hover:scale-[1.02] transition-transform cursor-pointer shadow-[0px_4px_12px_rgba(107,58,42,0.1)]">
+            <span className="font-bold text-base text-primary">Registrar Compra</span>
+          </button>
+          <button onClick={() => navigate('/stock')} className="bg-surface-container-low p-6 rounded-xl flex flex-col gap-2 hover:scale-[1.02] transition-transform cursor-pointer shadow-[0px_4px_12px_rgba(107,58,42,0.1)] text-left">
             <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>
               inventory_2
             </span>
             <span className="font-bold text-base text-primary">Stock de Premios</span>
-          </div>
+          </button>
         </div>
       </main>
 
       {/* Bottom nav */}
       <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[720px] bg-surface z-50 flex justify-around items-center px-4 pb-4 pt-2 shadow-[0px_-4px_12px_rgba(107,58,42,0.05)] border-t border-outline-variant">
-        <NavItem icon="home" label="Inicio" active />
-        <NavItem icon="qr_code_scanner" label="Escanear" />
-        <NavItem icon="groups" label="Clientes" />
-        <NavItem icon="settings" label="Panel" />
+        <NavItem icon="home" label="Inicio" active onClick={() => navigate("/dashboard")} />
+        <NavItem icon="qr_code_scanner" label="Escanear" onClick={() => navigate("/scan")} />
+        <NavItem icon="groups" label="Clientes" onClick={() => navigate("/client-view")} />
+        <NavItem icon="settings" label="Panel" onClick={() => navigate("/panel")} />
       </nav>
     </div>
   );

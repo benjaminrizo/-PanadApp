@@ -1,26 +1,49 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { validateEmployeePin } from "../services/api";
 
 export default function Login() {
   const [pin, setPin] = useState("");
   const [shaking, setShaking] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const navigate = useNavigate();
   const MAX_PIN = 4;
 
   function addPin(num: number) {
     if (pin.length < MAX_PIN) {
       setPin((prev) => prev + num);
+      if (errorMessage) setErrorMessage(null);
     }
   }
 
   function clearPin() {
     setPin((prev) => prev.slice(0, -1));
+    if (errorMessage) setErrorMessage(null);
   }
 
   function validateLogin() {
     if (pin.length === MAX_PIN) {
-      navigate("/dashboard");
+      // validate against backend
+      (async () => {
+        try {
+          const emp = await validateEmployeePin(pin);
+          if (emp) {
+            localStorage.setItem("employee", JSON.stringify(emp));
+            navigate("/dashboard");
+          } else {
+            setErrorMessage("PIN inválido");
+            setShaking(true);
+            setTimeout(() => setShaking(false), 400);
+          }
+        } catch (err) {
+          console.error(err);
+          setErrorMessage("Error de conexión. Intenta de nuevo.");
+          setShaking(true);
+          setTimeout(() => setShaking(false), 400);
+        }
+      })();
     } else {
+      setErrorMessage("Ingresa el PIN de 4 dígitos");
       setShaking(true);
       setTimeout(() => setShaking(false), 400);
     }
@@ -117,6 +140,21 @@ export default function Login() {
           >
             Ingresar
           </button>
+          {errorMessage && (
+            <div className="text-sm text-error mt-2 font-semibold">{errorMessage}</div>
+          )}
+
+          {import.meta.env.DEV && (
+            <button
+              onClick={() => {
+                localStorage.setItem("employee", JSON.stringify({ id: "dev", name: "Dev", role: "admin" }));
+                navigate("/dashboard");
+              }}
+              className="mt-3 text-xs underline text-on-surface-variant"
+            >
+              Atajo dev: ingresar como Dev
+            </button>
+          )}
         </div>
 
         {/* Footer */}
