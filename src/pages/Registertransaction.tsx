@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import BottomNav from "../components/BottomNav";
-import { getClientById, registerTransaction, type Client } from "../services/api";
+import { getClientById, registerTransaction, findClientByPhone, type Client } from "../services/api";
 
 // Regla: $1.000 COP = 1 punto
 const POINTS_RATE = 1000;
@@ -28,15 +28,22 @@ export default function RegisterTransaction() {
   const [client, setClient] = useState<Client | null>(null);
   const [loadingClient, setLoadingClient] = useState(true);
 
-  const [rawAmount, setRawAmount] = useState(""); // valor numérico sin formato
-  const [displayAmount, setDisplayAmount] = useState(""); // valor con formato visual
+  const [searchPhone, setSearchPhone] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+
+  const [rawAmount, setRawAmount] = useState("");
+  const [displayAmount, setDisplayAmount] = useState("");
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    if (!clientId) return;
+    if (!clientId) {
+      setLoadingClient(false);
+      return;
+    }
     loadClient(clientId);
   }, [clientId]);
 
@@ -51,6 +58,21 @@ export default function RegisterTransaction() {
       navigate("/dashboard");
     } finally {
       setLoadingClient(false);
+    }
+  }
+
+  async function handleSearchClient() {
+    if (!searchPhone.trim()) return;
+    setSearching(true);
+    setSearchError(null);
+    try {
+      const found = await findClientByPhone(searchPhone.replace(/\s/g, ""));
+      if (found) setClient(found);
+      else setSearchError("Cliente no encontrado.");
+    } catch {
+      setSearchError("Error buscando cliente.");
+    } finally {
+      setSearching(false);
     }
   }
 
@@ -97,7 +119,54 @@ export default function RegisterTransaction() {
     );
   }
 
-  if (!client) return null;
+  // ── Estado: sin cliente, mostrar buscador ─────────────────────────────────
+  if (!client) {
+    return (
+      <div className="bg-surface min-h-screen font-sans text-on-surface">
+        <Navbar back title="Registrar Compra" />
+        <main className="max-w-[720px] mx-auto px-5 pt-10 space-y-4">
+          <section className="bg-surface-container-lowest rounded-xl p-6 border border-outline-variant space-y-4">
+            <div className="flex flex-col items-center gap-2 pb-2">
+              <span
+                className="material-symbols-outlined text-primary"
+                style={{ fontSize: 40, fontVariationSettings: "'FILL' 1" }}
+              >
+                person_search
+              </span>
+              <h2 className="text-base font-extrabold text-on-surface">
+                Buscar cliente por teléfono
+              </h2>
+              <p className="text-xs text-on-surface-variant text-center">
+                Ingresa el número del cliente para registrar su compra
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                inputMode="numeric"
+                value={searchPhone}
+                onChange={(e) => setSearchPhone(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearchClient()}
+                placeholder="Ej. 3001234567"
+                className="flex-1 h-12 rounded-lg border-2 border-outline-variant px-4 focus:border-primary focus:outline-none transition-all"
+              />
+              <button
+                onClick={handleSearchClient}
+                disabled={searching}
+                className="h-12 px-5 bg-primary text-white rounded-lg font-bold disabled:opacity-50 active:scale-[0.98] transition-transform"
+              >
+                {searching ? "..." : "Buscar"}
+              </button>
+            </div>
+            {searchError && (
+              <p className="text-sm text-error font-semibold">{searchError}</p>
+            )}
+          </section>
+        </main>
+        <BottomNav />
+      </div>
+    );
+  }
 
   // ── Estado: éxito ─────────────────────────────────────────────────────────
   if (success) {
@@ -138,6 +207,7 @@ export default function RegisterTransaction() {
                 setRawAmount("");
                 setDisplayAmount("");
                 setNote("");
+                if (!clientId) setClient(null);
               }}
               className="w-full h-14 rounded-lg border-2 border-outline-variant text-on-surface font-bold text-base hover:bg-surface-container transition-colors"
             >
@@ -180,7 +250,15 @@ export default function RegisterTransaction() {
             </p>
           </div>
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => {
+              if (!clientId) {
+                setClient(null);
+                setSearchPhone("");
+                setSearchError(null);
+              } else {
+                navigate(-1);
+              }
+            }}
             className="text-xs text-primary font-bold underline shrink-0"
           >
             Cambiar
@@ -215,7 +293,6 @@ export default function RegisterTransaction() {
 
           {/* Display de puntos calculados */}
           <div className="bg-secondary-fixed rounded-xl p-4 flex items-center justify-between border-2 border-dashed border-secondary-fixed-dim relative overflow-hidden">
-            {/* Textura de puntos */}
             <div
               className="absolute inset-0 opacity-5 pointer-events-none"
               style={{

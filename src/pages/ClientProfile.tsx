@@ -5,8 +5,10 @@ import BottomNav from "../components/BottomNav";
 import {
   findClientByPhone,
   getClientTransactions,
+  getRewards,
   type Client,
   type Transaction,
+  type Reward,
 } from "../services/api";
 
 // ─── Constantes de niveles ────────────────────────────────────────────────────
@@ -22,12 +24,15 @@ const TIER_COLORS: Record<string, string> = {
   vip: "bg-primary-container text-on-primary-container",
 };
 
-// Recompensa objetivo según puntos actuales
-function getNextReward(points: number): { name: string; target: number } {
-  if (points < 200) return { name: "Café gratis", target: 200 };
-  if (points < 400) return { name: "Pan artesanal gratis", target: 400 };
-  if (points < 800) return { name: "Desayuno completo gratis", target: 800 };
-  return { name: "Caja de pasteles", target: 1500 };
+// Recompensa objetivo según puntos actuales y catálogo real
+function getNextReward(points: number, rewards: Reward[]): { name: string; target: number } | null {
+  const next = rewards
+    .filter(r => r.active)
+    .sort((a, b) => a.points_cost - b.points_cost)
+    .find(r => r.points_cost > points);
+
+  if (!next) return null;
+  return { name: next.name, target: next.points_cost };
 }
 
 function formatDate(isoString: string): string {
@@ -53,6 +58,7 @@ export default function ClientProfile() {
 
   const [client, setClient] = useState<Client | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [rewards, setRewards] = useState<Reward[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -65,7 +71,10 @@ export default function ClientProfile() {
     setLoading(true);
     setError(null);
     try {
-      const clientData = await findClientByPhone(phoneNumber);
+      const [clientData, rewardList] = await Promise.all([
+        findClientByPhone(phoneNumber),
+        getRewards(),
+      ]);
 
       if (!clientData) {
         setError("Cliente no encontrado.");
@@ -76,6 +85,7 @@ export default function ClientProfile() {
       const txs = await getClientTransactions(clientData.id);
       setClient(clientData);
       setTransactions(txs.slice(0, 5));
+      setRewards(rewardList);
     } catch (err) {
       console.error(err);
       setError("No se pudo cargar el perfil. Intenta de nuevo.");
@@ -84,7 +94,6 @@ export default function ClientProfile() {
     }
   }
 
-  // ── Estados de carga / error ──────────────────────────────────────────────
   if (loading) {
     return (
       <div className="bg-surface min-h-screen font-sans text-on-surface">
@@ -96,7 +105,7 @@ export default function ClientProfile() {
           <div className="w-full h-32 bg-surface-container rounded-xl animate-pulse mt-4" />
           <div className="w-full h-48 bg-surface-container rounded-xl animate-pulse" />
         </main>
-          <BottomNav />
+        <BottomNav />
       </div>
     );
   }
@@ -126,11 +135,14 @@ export default function ClientProfile() {
     );
   }
 
-  const nextReward = getNextReward(client.points);
-  const progress = Math.min((client.points / nextReward.target) * 100, 100);
-  const pointsLeft = Math.max(nextReward.target - client.points, 0);
+  const nextReward = getNextReward(client.points, rewards);
+  const progress = nextReward
+    ? Math.min((client.points / nextReward.target) * 100, 100)
+    : 100;
+  const pointsLeft = nextReward
+    ? Math.max(nextReward.target - client.points, 0)
+    : 0;
 
-  // Iniciales para avatar
   const initials = client.name
     .split(" ")
     .slice(0, 2)
@@ -146,7 +158,6 @@ export default function ClientProfile() {
 
         {/* ── Avatar + nombre ─────────────────────────────────────────────── */}
         <section className="flex flex-col items-center gap-2 py-4">
-          {/* Avatar con iniciales */}
           <div className="w-24 h-24 rounded-full bg-primary-container flex items-center justify-center shadow-[0px_4px_12px_rgba(107,58,42,0.2)]">
             <span className="text-3xl font-extrabold text-on-primary-container">
               {initials}
@@ -169,7 +180,6 @@ export default function ClientProfile() {
             </p>
           )}
 
-          {/* Badge de nivel */}
           <span
             className={`mt-1 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
               TIER_COLORS[client.tier] ?? TIER_COLORS.standard
@@ -181,7 +191,6 @@ export default function ClientProfile() {
 
         {/* ── Tarjeta de puntos ────────────────────────────────────────────── */}
         <div className="bg-surface-container-lowest rounded-xl p-6 border border-outline-variant shadow-[0px_4px_12px_rgba(107,58,42,0.1)] relative overflow-hidden">
-          {/* Decoración fondo */}
           <span
             className="material-symbols-outlined absolute top-3 right-3 text-primary opacity-5 select-none"
             style={{ fontSize: 96, fontVariationSettings: "'FILL' 1" }}
@@ -190,7 +199,6 @@ export default function ClientProfile() {
           </span>
 
           <div className="relative z-10">
-            {/* Puntos actuales */}
             <div className="flex justify-between items-end mb-4">
               <div>
                 <p className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">
@@ -204,14 +212,23 @@ export default function ClientProfile() {
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-xs text-secondary font-semibold">
-                  Faltan {pointsLeft} para
-                </p>
-                <p className="text-sm font-bold text-on-surface">{nextReward.name}</p>
+                {nextReward ? (
+                  <>
+                    <p className="text-xs text-secondary font-semibold">
+                      Faltan {pointsLeft} para
+                    </p>
+                    <p className="text-sm font-bold text-on-surface">
+                      {nextReward.name}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-sm font-bold text-secondary">
+                    ¡Puedes canjear todo!
+                  </p>
+                )}
               </div>
             </div>
 
-            {/* Barra de progreso */}
             <div className="h-3 w-full bg-surface-container rounded-full overflow-hidden mb-2">
               <div
                 className="h-full bg-secondary-container rounded-full transition-all duration-1000"
@@ -221,10 +238,9 @@ export default function ClientProfile() {
 
             <div className="flex justify-between text-xs text-on-surface-variant font-semibold">
               <span>0 pts</span>
-              <span>{nextReward.target} pts</span>
+              <span>{nextReward ? `${nextReward.target} pts` : "✓"}</span>
             </div>
 
-            {/* Miembro desde */}
             <p className="mt-3 text-xs text-on-surface-variant opacity-70 text-center">
               Miembro desde {formatDate(client.created_at)}
             </p>
