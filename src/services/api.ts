@@ -218,3 +218,28 @@ export async function getClients(limit = 100): Promise<Client[]> {
   if (error) throw error;
   return data ?? [];
 }
+/** Editar datos de un cliente */
+export async function updateClient(
+  id: string,
+  updates: Partial<Pick<Client, "name" | "phone" | "email">>
+): Promise<Client> {
+  const { data, error } = await supabase
+    .from("clients")
+    .update(updates)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/** Eliminar cliente */
+export async function deleteClient(id: string): Promise<void> {
+  const { error } = await supabase
+    .from("clients")
+    .delete()
+    .eq("id", id);
+
+  if (error) throw error;
+}

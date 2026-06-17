@@ -58,19 +58,14 @@ export default function Login() {
       <div className="w-full max-w-[400px] flex flex-col items-center gap-16">
         {/* Branding */}
         <header className="text-center flex flex-col items-center gap-3">
-          <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-primary-fixed shadow-md mb-2">
-            <span
-              className="material-symbols-outlined text-primary"
-              style={{ fontSize: 48, fontVariationSettings: "'FILL' 1" }}
-            >
-              bakery_dining
-            </span>
+          <div className="mb-2">
+            <img src="/icono.png" alt="PanadApp" className="w-28 h-28 object-contain" />
           </div>
           <h1 className="text-3xl font-extrabold text-primary tracking-tight">
             PanadApp
           </h1>
           <p className="text-sm font-bold text-secondary uppercase tracking-widest">
-            Panadería El Buen Pan
+            Panadería Yumbolac
           </p>
         </header>
 

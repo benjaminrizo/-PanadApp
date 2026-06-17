@@ -6,12 +6,12 @@ import {
   findClientByPhone,
   getClientTransactions,
   getRewards,
+  updateClient,
   type Client,
   type Transaction,
   type Reward,
 } from "../services/api";
 
-// ─── Constantes de niveles ────────────────────────────────────────────────────
 const TIER_LABELS: Record<string, string> = {
   standard: "Estándar",
   premium: "Premium",
@@ -24,13 +24,11 @@ const TIER_COLORS: Record<string, string> = {
   vip: "bg-primary-container text-on-primary-container",
 };
 
-// Recompensa objetivo según puntos actuales y catálogo real
 function getNextReward(points: number, rewards: Reward[]): { name: string; target: number } | null {
   const next = rewards
     .filter(r => r.active)
     .sort((a, b) => a.points_cost - b.points_cost)
     .find(r => r.points_cost > points);
-
   if (!next) return null;
   return { name: next.name, target: next.points_cost };
 }
@@ -51,7 +49,6 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-// ─── Componente principal ─────────────────────────────────────────────────────
 export default function ClientProfile() {
   const { phone } = useParams<{ phone: string }>();
   const navigate = useNavigate();
@@ -61,6 +58,14 @@ export default function ClientProfile() {
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // ── Estados edición ───────────────────────────────────────────────────────
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!phone) return;
@@ -75,13 +80,11 @@ export default function ClientProfile() {
         findClientByPhone(phoneNumber),
         getRewards(),
       ]);
-
       if (!clientData) {
         setError("Cliente no encontrado.");
         setLoading(false);
         return;
       }
-
       const txs = await getClientTransactions(clientData.id);
       setClient(clientData);
       setTransactions(txs.slice(0, 5));
@@ -94,6 +97,44 @@ export default function ClientProfile() {
     }
   }
 
+  function openEdit() {
+    if (!client) return;
+    setEditName(client.name);
+    setEditPhone(client.phone);
+    setEditEmail(client.email ?? "");
+    setEditError(null);
+    setEditing(true);
+  }
+
+  async function handleSave() {
+    if (!client) return;
+    if (!editName.trim() || !editPhone.trim()) {
+      setEditError("Nombre y teléfono son obligatorios.");
+      return;
+    }
+    setSaving(true);
+    setEditError(null);
+    try {
+      const updated = await updateClient(client.id, {
+        name: editName.trim(),
+        phone: editPhone.trim(),
+        email: editEmail.trim() || undefined,
+      });
+      setClient(updated);
+      setEditing(false);
+      // Si cambió el teléfono, actualizar la URL
+      if (editPhone.trim() !== client.phone) {
+        navigate(`/client/${editPhone.trim()}`, { replace: true });
+      }
+    } catch (err) {
+      console.error(err);
+      setEditError("No se pudo guardar. Intenta de nuevo.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // ── Loading ───────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="bg-surface min-h-screen font-sans text-on-surface">
@@ -110,15 +151,13 @@ export default function ClientProfile() {
     );
   }
 
+  // ── Error ─────────────────────────────────────────────────────────────────
   if (error || !client) {
     return (
       <div className="bg-surface min-h-screen font-sans text-on-surface">
         <Navbar back title="Perfil del Cliente" />
         <main className="max-w-[720px] mx-auto px-5 pt-20 flex flex-col items-center gap-4 text-center">
-          <span
-            className="material-symbols-outlined text-error"
-            style={{ fontSize: 56 }}
-          >
+          <span className="material-symbols-outlined text-error" style={{ fontSize: 56 }}>
             person_off
           </span>
           <p className="text-lg font-bold text-on-surface">
@@ -156,7 +195,7 @@ export default function ClientProfile() {
 
       <main className="max-w-[720px] mx-auto px-5 pt-8 pb-24 space-y-4">
 
-        {/* ── Avatar + nombre ─────────────────────────────────────────────── */}
+        {/* ── Avatar + nombre ──────────────────────────────────────────────── */}
         <section className="flex flex-col items-center gap-2 py-4">
           <div className="w-24 h-24 rounded-full bg-primary-container flex items-center justify-center shadow-[0px_4px_12px_rgba(107,58,42,0.2)]">
             <span className="text-3xl font-extrabold text-on-primary-container">
@@ -187,9 +226,18 @@ export default function ClientProfile() {
           >
             {TIER_LABELS[client.tier] ?? client.tier}
           </span>
+
+          {/* Botón editar */}
+          <button
+            onClick={openEdit}
+            className="mt-1 flex items-center gap-1 text-xs text-primary font-bold hover:underline"
+          >
+            <span className="material-symbols-outlined text-[16px]">edit</span>
+            Editar datos
+          </button>
         </section>
 
-        {/* ── Tarjeta de puntos ────────────────────────────────────────────── */}
+        {/* ── Tarjeta de puntos ─────────────────────────────────────────────── */}
         <div className="bg-surface-container-lowest rounded-xl p-6 border border-outline-variant shadow-[0px_4px_12px_rgba(107,58,42,0.1)] relative overflow-hidden">
           <span
             className="material-symbols-outlined absolute top-3 right-3 text-primary opacity-5 select-none"
@@ -197,7 +245,6 @@ export default function ClientProfile() {
           >
             bakery_dining
           </span>
-
           <div className="relative z-10">
             <div className="flex justify-between items-end mb-4">
               <div>
@@ -217,14 +264,10 @@ export default function ClientProfile() {
                     <p className="text-xs text-secondary font-semibold">
                       Faltan {pointsLeft} para
                     </p>
-                    <p className="text-sm font-bold text-on-surface">
-                      {nextReward.name}
-                    </p>
+                    <p className="text-sm font-bold text-on-surface">{nextReward.name}</p>
                   </>
                 ) : (
-                  <p className="text-sm font-bold text-secondary">
-                    ¡Puedes canjear todo!
-                  </p>
+                  <p className="text-sm font-bold text-secondary">¡Puedes canjear todo!</p>
                 )}
               </div>
             </div>
@@ -247,16 +290,13 @@ export default function ClientProfile() {
           </div>
         </div>
 
-        {/* ── Botones de acción ────────────────────────────────────────────── */}
+        {/* ── Botones de acción ─────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 gap-3">
           <button
             onClick={() => navigate(`/register-transaction/${client.id}`)}
             className="flex items-center justify-center gap-2 bg-primary text-white h-14 rounded-lg font-bold text-sm shadow-[0px_4px_12px_rgba(107,58,42,0.15)] active:scale-[0.98] transition-transform"
           >
-            <span
-              className="material-symbols-outlined"
-              style={{ fontVariationSettings: "'FILL' 1" }}
-            >
+            <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
               add_shopping_cart
             </span>
             Registrar compra
@@ -266,17 +306,14 @@ export default function ClientProfile() {
             onClick={() => navigate(`/rewards?client=${client.id}`)}
             className="flex items-center justify-center gap-2 bg-secondary-container text-on-secondary-container h-14 rounded-lg font-bold text-sm active:scale-[0.98] transition-transform"
           >
-            <span
-              className="material-symbols-outlined"
-              style={{ fontVariationSettings: "'FILL' 1" }}
-            >
+            <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
               redeem
             </span>
             Canjear premio
           </button>
         </div>
 
-        {/* ── Historial de compras ─────────────────────────────────────────── */}
+        {/* ── Historial de compras ──────────────────────────────────────────── */}
         <section>
           <h3 className="text-base font-extrabold text-on-surface mb-3 px-1">
             Últimas compras
@@ -329,7 +366,7 @@ export default function ClientProfile() {
           )}
         </section>
 
-        {/* ── Footer ───────────────────────────────────────────────────────── */}
+        {/* ── Footer ────────────────────────────────────────────────────────── */}
         <div className="flex flex-col items-center gap-1 pt-2 opacity-30">
           <span className="material-symbols-outlined text-primary">bakery_dining</span>
           <p className="text-xs font-bold text-primary tracking-widest uppercase">
@@ -337,6 +374,72 @@ export default function ClientProfile() {
           </p>
         </div>
       </main>
+
+      {/* ── Modal editar cliente ─────────────────────────────────────────────── */}
+      {editing && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-5">
+          <div className="bg-surface rounded-2xl p-6 max-w-sm w-full space-y-4 shadow-xl">
+            <h3 className="text-lg font-extrabold text-on-surface">Editar cliente</h3>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-on-surface-variant mb-1">
+                  Nombre <span className="text-error">*</span>
+                </label>
+                <input
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full h-11 rounded-lg border-2 border-outline-variant px-3 focus:border-primary focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-on-surface-variant mb-1">
+                  Teléfono <span className="text-error">*</span>
+                </label>
+                <input
+                  value={editPhone}
+                  onChange={(e) => setEditPhone(e.target.value)}
+                  inputMode="numeric"
+                  className="w-full h-11 rounded-lg border-2 border-outline-variant px-3 focus:border-primary focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-on-surface-variant mb-1">
+                  Email{" "}
+                  <span className="text-xs font-normal opacity-60">(opcional)</span>
+                </label>
+                <input
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  type="email"
+                  className="w-full h-11 rounded-lg border-2 border-outline-variant px-3 focus:border-primary focus:outline-none"
+                />
+              </div>
+            </div>
+
+            {editError && (
+              <p className="text-sm text-error font-semibold">{editError}</p>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setEditing(false)}
+                disabled={saving}
+                className="flex-1 h-12 rounded-lg border-2 border-outline-variant font-bold text-sm hover:bg-surface-container transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex-1 h-12 rounded-lg bg-primary text-white font-bold text-sm active:scale-[0.98] transition-transform disabled:opacity-50"
+              >
+                {saving ? "Guardando..." : "Guardar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
